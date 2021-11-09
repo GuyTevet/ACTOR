@@ -17,7 +17,7 @@ from src.datasets.get_dataset import get_datasets
 
 
 class NewDataloader:
-    def __init__(self, mode, model, dataiterator, device):
+    def __init__(self, mode, model, dataiterator, device, interp_ratio=None, interp_type=None):
         assert mode in ["gen", "rc", "gt"]
         self.batches = []
         with torch.no_grad():
@@ -25,7 +25,10 @@ class NewDataloader:
                 if mode == "gen":
                     classes = databatch["y"]
                     gendurations = databatch["lengths"]
-                    batch = model.generate(classes, gendurations)
+                    if interp_ratio > 0:
+                        batch = model.generate(classes, gendurations, interp_ratio=interp_ratio, interp_type=interp_type)
+                    else:
+                        batch = model.generate(classes, gendurations)
                     batch = {key: val.to(device) for key, val in batch.items()}
                 elif mode == "gt":
                     batch = {key: val.to(device) for key, val in databatch.items()}
@@ -47,7 +50,7 @@ class NewDataloader:
         return iter(self.batches)
 
 
-def evaluate(parameters, folder, checkpointname, epoch, niter):
+def evaluate(parameters, folder, checkpointname, epoch, niter, interp_ratio, interp_type):
     num_frames = 60
 
     # fix parameters for action2motion evaluation
@@ -103,7 +106,7 @@ def evaluate(parameters, folder, checkpointname, epoch, niter):
                                        shuffle=False, num_workers=8, collate_fn=collate)
 
             # reconstructedloader = NewDataloader("rc", model, dataiterator, device)
-            motionloader = NewDataloader("gen", model, dataiterator, device)
+            motionloader = NewDataloader("gen", model, dataiterator, device, interp_ratio, interp_type)
             gt_motionloader = NewDataloader("gt", model, dataiterator, device)
             gt_motionloader2 = NewDataloader("gt", model, dataiterator2, device)
 
@@ -129,7 +132,10 @@ def evaluate(parameters, folder, checkpointname, epoch, niter):
     # model.pose_rep: {key: [format_metrics(pose_metrics[seed])[key] for seed in allseeds] for key in pose_metrics[allseeds[0]]}}
 
     epoch = checkpointname.split("_")[1].split(".")[0]
-    metricname = "evaluation_metrics_{}_all.yaml".format(epoch)
+    if interp_ratio > 0:
+        metricname = "evaluation_metrics_{}_all_interp_{}_ratio_{}.yaml".format(epoch, interp_type, interp_ratio)
+    else:
+        metricname = "evaluation_metrics_{}_all.yaml".format(epoch)
 
     evalpath = os.path.join(folder, metricname)
     print(f"Saving evaluation: {evalpath}")

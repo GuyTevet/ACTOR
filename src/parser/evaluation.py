@@ -12,6 +12,8 @@ def parser():
     parser.add_argument("--num_frames", default=60, type=int, help="number of frames or -1")
     parser.add_argument("--niter", default=20, type=int, help="number of iterations")
     parser.add_argument("--num_seq_max", default=3000, type=int, help="number of sequences maximum to load or -1")
+    parser.add_argument("--interp_ratio", default=-1, type=int, help="-1 means no interpolation.")
+    parser.add_argument("--interp_type", default='nearest', type=str, choices=['nearest'], help="")
 
     # cuda options
     add_cuda_options(parser)
@@ -25,6 +27,6 @@ def parser():
     adding_cuda(parameters)
 
     epoch = int(checkpoint.split("_")[1].split('.')[0])
-    return parameters, folder, checkpoint, epoch, opt.niter
+    return parameters, folder, checkpoint, epoch, opt.niter, opt.interp_ratio, opt.interp_type
 
 
