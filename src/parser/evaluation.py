@@ -27,6 +27,6 @@ def parser():
     adding_cuda(parameters)
 
     epoch = int(checkpoint.split("_")[1].split('.')[0])
-    return parameters, folder, checkpoint, epoch, opt.niter, opt.interp_ratio, opt.interp_type
+    return parameters, folder, checkpoint, epoch, opt.niter
 
 
