@@ -35,13 +35,31 @@ class CAE(nn.Module):
                           "jointstype": self.jointstype,
                           "translation": self.translation,
                           "vertstrans": self.vertstrans}
-        
+    def interp_batch(self, batch, interp_type, interp_ratio):
+        # print(batch.keys())
+        # for k in batch.keys():
+        #     print('{}: {}'.format(k, batch[k].shape))
+        # print(interp_ratio)
+        # print(interp_ratio is not None)
+        assert type(interp_ratio) == int
+        interp_keys = ['output']
+        for k in interp_keys:
+            sample = batch[k][..., 0::interp_ratio]
+            print(sample.shape)
+            scale_factor = tuple([1.] * (len(batch[k].shape) - 1 - 2) + [float(interp_ratio)])
+            interped = torch.nn.functional.interpolate(sample, scale_factor=scale_factor, mode=interp_type,
+                                                       align_corners=None, recompute_scale_factor=None)
+            print(interped.shape)
+            assert interped.shape == batch[k].shape
+            batch[k] = interped
+        return batch
+
     def rot2xyz(self, x, mask, **kwargs):
         kargs = self.param2xyz.copy()
         kargs.update(kwargs)
         return self.rotation2xyz(x, mask, **kargs)
     
-    def forward(self, batch):
+    def forward(self, batch, interp_ratio=None, interp_type='nearest'):
         if self.outputxyz:
             batch["x_xyz"] = self.rot2xyz(batch["x"], batch["mask"])
         elif self.pose_rep == "xyz":
@@ -50,6 +68,8 @@ class CAE(nn.Module):
         batch.update(self.encoder(batch))
         # decode
         batch.update(self.decoder(batch))
+        if interp_ratio is not None:
+            batch = self.interp_batch(batch, interp_type, interp_ratio)
         # if we want to output xyz
         if self.outputxyz:
             batch["output_xyz"] = self.rot2xyz(batch["output"], batch["mask"])
@@ -139,29 +159,14 @@ class CAE(nn.Module):
 
         batch = {"z": fact*z, "y": y, "mask": mask, "lengths": lengths}
         batch = self.decoder(batch)
-        
+
+        if interp_ratio is not None:
+            batch = self.interp_batch(batch, interp_type, interp_ratio)
+
         if self.outputxyz:
             batch["output_xyz"] = self.rot2xyz(batch["output"], batch["mask"])
         elif self.pose_rep == "xyz":
             batch["output_xyz"] = batch["output"]
-
-        # print(batch.keys())
-        # for k in batch.keys():
-        #     print('{}: {}'.format(k, batch[k].shape))
-        # print(interp_ratio)
-        # print(interp_ratio is not None)
-
-        if interp_ratio is not None:
-            assert type(interp_ratio) == int
-            interp_keys = ['output', 'output_xyz']
-            for k in interp_keys:
-                sample = batch[k][..., 0::interp_ratio]
-                print(sample.shape)
-                scale_factor = tuple([1.] * (len(batch[k].shape)-1-2) + [float(interp_ratio)])
-                interped = torch.nn.functional.interpolate(sample, scale_factor=scale_factor, mode=interp_type, align_corners=None, recompute_scale_factor=None)
-                print(interped.shape)
-                assert interped.shape == batch[k].shape
-                batch[k] = interped
         return batch
     
     def return_latent(self, batch, seed=None):

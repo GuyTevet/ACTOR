@@ -38,7 +38,10 @@ class NewDataloader:
                     batch["output_xyz"] = batch["x_xyz"]
                 elif mode == "rc":
                     databatch = {key: val.to(device) for key, val in databatch.items()}
-                    batch = model(databatch)
+                    if interp_ratio > 0:
+                        batch = model(databatch, interp_ratio=interp_ratio, interp_type=interp_type)
+                    else:
+                        batch = model(databatch)
                     batch["output_xyz"] = model.rot2xyz(batch["output"],
                                                         batch["mask"])
                     batch["x_xyz"] = model.rot2xyz(batch["x"],
@@ -50,7 +53,7 @@ class NewDataloader:
         return iter(self.batches)
 
 
-def evaluate(parameters, folder, checkpointname, epoch, niter, interp_ratio, interp_type):
+def evaluate(parameters, folder, checkpointname, epoch, niter):
     num_frames = 60
 
     # fix parameters for action2motion evaluation
@@ -105,14 +108,14 @@ def evaluate(parameters, folder, checkpointname, epoch, niter, interp_ratio, int
             dataiterator2 = DataLoader(datasetGT2, batch_size=parameters["batch_size"],
                                        shuffle=False, num_workers=8, collate_fn=collate)
 
-            # reconstructedloader = NewDataloader("rc", model, dataiterator, device)
-            motionloader = NewDataloader("gen", model, dataiterator, device, interp_ratio, interp_type)
+            reconstructedloader = NewDataloader("rc", model, dataiterator, device, parameters['interp_ratio'], parameters['interp_type'])
+            motionloader = NewDataloader("gen", model, dataiterator, device, parameters['interp_ratio'], parameters['interp_type'])
             gt_motionloader = NewDataloader("gt", model, dataiterator, device)
             gt_motionloader2 = NewDataloader("gt", model, dataiterator2, device)
 
             # Action2motionEvaluation
             loaders = {"gen": motionloader,
-                       # "recons": reconstructedloader,
+                       "recons": reconstructedloader,
                        "gt": gt_motionloader,
                        "gt2": gt_motionloader2}
 
@@ -132,8 +135,8 @@ def evaluate(parameters, folder, checkpointname, epoch, niter, interp_ratio, int
     # model.pose_rep: {key: [format_metrics(pose_metrics[seed])[key] for seed in allseeds] for key in pose_metrics[allseeds[0]]}}
 
     epoch = checkpointname.split("_")[1].split(".")[0]
-    if interp_ratio > 0:
-        metricname = "evaluation_metrics_{}_all_interp_{}_ratio_{}.yaml".format(epoch, interp_type, interp_ratio)
+    if parameters['interp_ratio'] > 0:
+        metricname = "evaluation_metrics_{}_all_interp_{}_ratio_{}.yaml".format(epoch, parameters['interp_type'], parameters['interp_ratio'])
     else:
         metricname = "evaluation_metrics_{}_all.yaml".format(epoch)
 

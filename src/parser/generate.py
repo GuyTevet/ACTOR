@@ -21,6 +21,9 @@ def add_generation_options(parser):
     group.add_argument("--mode", default="gen", choices=["interpolate", "gen", "duration", "reconstruction"],
                        help="The kind of generation considered.")
 
+    group.add_argument("--interp_ratio", default=-1, type=int, help="-1 means no interpolation.")
+    group.add_argument("--interp_type", default='nearest', type=str, choices=['nearest'], help="")
+
 
 def parser():
     parser = ArgumentParser()
@@ -39,6 +42,9 @@ def parser():
     parameters.update(newparameters)
 
     adding_cuda(parameters)
+
+    if parameters['interp_ratio'] <= 0:
+        parameters['interp_ratio'] = None
 
     epoch = int(checkpoint.split("_")[-1].split('.')[0])
     return parameters, folder, checkpoint, epoch

@@ -3,7 +3,7 @@ import imageio
 import os
 import argparse
 from tqdm import tqdm
-from .renderer import get_renderer
+from src.render.renderer import get_renderer
 
 
 def get_rotation(theta=np.pi/3):

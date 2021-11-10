@@ -14,7 +14,8 @@ plt.switch_backend('agg')
 
 
 def generate_actions(beta, model, dataset, epoch, params, folder, num_frames=60,
-                     durationexp=False, vertstrans=True, onlygen=False, nspa=10, inter=False, writer=None):
+                     durationexp=False, vertstrans=True, onlygen=False, nspa=10, inter=False, writer=None,
+                     interp_ratio=None, interp_type='nearest'):
     """ Generate & viz samples """
 
     # visualize with joints3D
@@ -79,7 +80,7 @@ def generate_actions(beta, model, dataset, epoch, params, folder, num_frames=60,
             generation = model.generate(classes, gendurations, nspa=nspa,
                                         noise_same_action=noise_same_action,
                                         noise_diff_action=noise_diff_action,
-                                        fact=fact)
+                                        fact=fact, interp_ratio=interp_ratio, interp_type=interp_type)
 
             generation["output_xyz"] = model.rot2xyz(generation["output"],
                                                      generation["mask"], vertstrans=vertstrans,
@@ -101,7 +102,7 @@ def generate_actions(beta, model, dataset, epoch, params, folder, num_frames=60,
             generation = model.generate(classes, gendurations, nspa=nspa,
                                         noise_same_action=noise_same_action,
                                         noise_diff_action=noise_diff_action,
-                                        fact=fact)
+                                        fact=fact, interp_ratio=interp_ratio, interp_type=interp_type)
 
             generation["output_xyz"] = model.rot2xyz(generation["output"],
                                                      generation["mask"], vertstrans=vertstrans,
@@ -147,9 +148,12 @@ def main():
         for beta in betas:
             output = generate_actions(beta, model, dataset, epoch, parameters,
                                       folder, inter=inter, vertstrans=vertstrans,
-                                      nspa=nspa, onlygen=onlygen)
+                                      nspa=nspa, onlygen=onlygen,
+                                      interp_ratio=parameters['interp_ratio'], interp_type=parameters['interp_type'])
             if varying_beta:
                 filename = "generation_beta_{}.npy".format(beta)
+            elif parameters['interp_ratio'] is not None:
+                filename = 'generation_interp_{}_ratio_{}.npy'.format(parameters['interp_type'], parameters['interp_ratio'])
             else:
                 filename = "generation.npy"
 
