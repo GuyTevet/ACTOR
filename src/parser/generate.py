@@ -22,7 +22,7 @@ def add_generation_options(parser):
                        help="The kind of generation considered.")
 
     group.add_argument("--interp_ratio", default=-1, type=int, help="-1 means no interpolation.")
-    group.add_argument("--interp_type", default='nearest', type=str, choices=['nearest'], help="")
+    group.add_argument("--interp_type", default='nearest', type=str, help="")
 
 
 def parser():

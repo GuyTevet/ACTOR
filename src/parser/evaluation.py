@@ -13,7 +13,7 @@ def parser():
     parser.add_argument("--niter", default=20, type=int, help="number of iterations")
     parser.add_argument("--num_seq_max", default=3000, type=int, help="number of sequences maximum to load or -1")
     parser.add_argument("--interp_ratio", default=-1, type=int, help="-1 means no interpolation.")
-    parser.add_argument("--interp_type", default='nearest', type=str, choices=['nearest'], help="")
+    parser.add_argument("--interp_type", default='nearest', type=str, help="")
 
     # cuda options
     add_cuda_options(parser)

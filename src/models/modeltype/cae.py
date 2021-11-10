@@ -36,6 +36,8 @@ class CAE(nn.Module):
                           "translation": self.translation,
                           "vertstrans": self.vertstrans}
     def interp_batch(self, batch, interp_type, interp_ratio):
+        import numpy as np
+        from scipy.interpolate import interp1d
         # print(batch.keys())
         # for k in batch.keys():
         #     print('{}: {}'.format(k, batch[k].shape))
@@ -44,14 +46,29 @@ class CAE(nn.Module):
         assert type(interp_ratio) == int
         interp_keys = ['output']
         for k in interp_keys:
-            sample = batch[k][..., 0::interp_ratio]
-            print(sample.shape)
-            scale_factor = tuple([1.] * (len(batch[k].shape) - 1 - 2) + [float(interp_ratio)])
-            interped = torch.nn.functional.interpolate(sample, scale_factor=scale_factor, mode=interp_type,
-                                                       align_corners=None, recompute_scale_factor=None)
-            print(interped.shape)
+            # sample
+            timeline = np.arange(batch[k].shape[-1])
+            sample_timeline = timeline[0::interp_ratio]
+            if sample_timeline[-1] != timeline[-1]:
+                sample_timeline = np.append(sample_timeline, timeline[-1])
+            sample = batch[k][..., sample_timeline].cpu().numpy()
+
+            # print(timeline)
+            # print(sample_timeline)
+            # print(sample.shape)
+            # print(len(sample.shape)-1)
+
+            # interpoloate
+            interp_fn = interp1d(sample_timeline, sample, axis=len(sample.shape)-1, kind=interp_type)
+            interped = interp_fn(timeline)
+
+            # scale_factor = tuple([1.] * (len(batch[k].shape) - 1 - 2) + [float(interp_ratio)])
+            # interped = torch.nn.functional.interpolate(sample, scale_factor=scale_factor, mode=interp_type,
+            #                                            align_corners=None, recompute_scale_factor=None)
+            # print(interped.shape)
+
             assert interped.shape == batch[k].shape
-            batch[k] = interped
+            batch[k] = torch.tensor(interped, device=self.device, dtype=torch.float32)
         return batch
 
     def rot2xyz(self, x, mask, **kwargs):
