@@ -65,7 +65,7 @@ class CAE(nn.Module):
             # scale_factor = tuple([1.] * (len(batch[k].shape) - 1 - 2) + [float(interp_ratio)])
             # interped = torch.nn.functional.interpolate(sample, scale_factor=scale_factor, mode=interp_type,
             #                                            align_corners=None, recompute_scale_factor=None)
-            # print(interped.shape)
+            print(interped.shape)
 
             assert interped.shape == batch[k].shape
             batch[k] = torch.tensor(interped, device=self.device, dtype=torch.float32)
