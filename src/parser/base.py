@@ -13,6 +13,14 @@ def add_cuda_options(parser):
     group.add_argument('--cpu', dest='cuda', action='store_false', help="if we want to use cpu")
     group.set_defaults(cuda=True)
 
+
+def add_experiment_options(parser):
+    group = parser.add_argument_group('Experiment options')
+    group.add_argument("--exp_name", default='no_exp', choices=['no_exp', 'naive_interp', 'diff_interp', 'smooth'], type=str, help="")
+    group.add_argument("--exp_type", default='', type=str, help="")
+    group.add_argument("--interp_sample_type", default='non-adaptive', type=str, help="")
+    group.add_argument("--exp_param", default=1, type=int, help="1 means no exp")
+
     
 def adding_cuda(parameters):
     import torch

@@ -4,7 +4,7 @@ import numpy as np
 from scipy.interpolate import interp1d
 # from lib.utils.geometry import rotation_matrix_to_angle_axis, rot6d_to_rotmat
 # from lib.models.smpl import SMPL, SMPL_MODEL_DIR, H36M_TO_J14, SMPL_MEAN_PARAMS
-from interp1d import Interp1d
+from .interp1d import Interp1d
 
 def projection(pred_joints, pred_camera):
     pred_cam_t = torch.stack([pred_camera[:, 1],
@@ -117,7 +117,6 @@ class Interpolator(nn.Module):
         for k, v in inp.items():
             interp_fn = interp1d(inp_timeline.cpu().numpy(), v.cpu().numpy(), axis=self.temporal_axis, kind=self.interp_type)
             interped[k] = interp_fn(out_timeline)
-            # print(interped.shape)
             for i in range(len(v.shape)):
                 if i == self.temporal_axis:
                     assert interped[k].shape[i] == out_seqlen

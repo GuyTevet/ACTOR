@@ -2,7 +2,7 @@ import argparse
 import os
 
 from .tools import load_args
-from .base import add_cuda_options, adding_cuda
+from .base import add_cuda_options, adding_cuda, add_experiment_options
 
 
 def parser():
@@ -12,11 +12,10 @@ def parser():
     parser.add_argument("--num_frames", default=60, type=int, help="number of frames or -1")
     parser.add_argument("--niter", default=20, type=int, help="number of iterations")
     parser.add_argument("--num_seq_max", default=3000, type=int, help="number of sequences maximum to load or -1")
-    parser.add_argument("--interp_ratio", default=-1, type=int, help="-1 means no interpolation.")
-    parser.add_argument("--interp_type", default='nearest', type=str, help="")
 
     # cuda options
     add_cuda_options(parser)
+    add_experiment_options(parser)
     
     opt = parser.parse_args()
     newparameters = {key: val for key, val in vars(opt).items() if val is not None}

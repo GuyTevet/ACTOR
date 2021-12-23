@@ -2,6 +2,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from src.models.architectures.tools.interp_utils import Dilator, Interpolator, DiffInterpolator, Smoother
 
 
 class PositionalEncoding(nn.Module):
@@ -155,8 +156,23 @@ class Decoder_TRANSFORMER(nn.Module):
         self.ablation = ablation
 
         self.activation = activation
-                
+
         self.input_feats = self.njoints*self.nfeats
+
+        # interp experiment
+        self.exp_name = kargs.get('exp_name', 'no_exp')
+        self.exp_type = kargs.get('exp_type', None)
+        self.interp_sample_type = kargs.get('interp_sample_type', 'non_adaptive')
+        self.exp_param = kargs.get('exp_param', 1)  # 1 means no interpolation/smoothing
+        if self.exp_name == 'naive_interp':
+            self.dilator = Dilator(dilation_rate=self.exp_param)
+            self.interpolator = Interpolator(interp_type=self.exp_type)
+        elif self.exp_name == 'diff_interp':
+            self.dilator = Dilator(dilation_rate=self.exp_param)
+            self.interpolator = DiffInterpolator(interp_type=self.exp_type,
+                                                 sample_type=self.interp_sample_type)
+        elif self.exp_name == 'smooth':
+            self.smoother = Smoother(filter_size=self.exp_param)
 
         # only for ablation / not used in the final model
         if self.ablation == "zandtime":
@@ -219,6 +235,32 @@ class Decoder_TRANSFORMER(nn.Module):
         # zero for padded area
         output[~mask.T] = 0
         output = output.permute(1, 2, 3, 0)
-        
+
+        # # debug
+        # print('output: ', output.shape)
+        # print('Before:')
+        # for k, v in batch.items():
+        #     print(k, ': ', v.shape)
+
+        # interp exp
+        if self.exp_name != 'no_exp':
+            output = torch.swapaxes(output, 1, -1)  # interp_utils support only temporal_axis=1, here it's at -1 (3)
+            if self.exp_name in ['naive_interp', 'diff_interp']:
+                # print('before dilation: ', output.shape)
+                out_dict, timeline = self.dilator({'output': output})
+                # print('timeline: ', timeline)
+                # print('after dilation: ', out_dict['output'].shape)
+                output = self.interpolator(out_dict, timeline)['output']
+                # print('after interp: ', output.shape)
+            elif self.exp_name == 'smooth':
+                output = self.smoother({'output': output})['output']
+            output = torch.swapaxes(output, 1, -1)
+
         batch["output"] = output
+
+        # # debug
+        # print('After:')
+        # for k, v in batch.items():
+        #     print(k, ': ', v.shape)
+
         return batch

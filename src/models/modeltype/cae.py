@@ -35,48 +35,48 @@ class CAE(nn.Module):
                           "jointstype": self.jointstype,
                           "translation": self.translation,
                           "vertstrans": self.vertstrans}
-    def interp_batch(self, batch, interp_type, interp_ratio):
-        import numpy as np
-        from scipy.interpolate import interp1d
-        # print(batch.keys())
-        # for k in batch.keys():
-        #     print('{}: {}'.format(k, batch[k].shape))
-        # print(interp_ratio)
-        # print(interp_ratio is not None)
-        assert type(interp_ratio) == int
-        interp_keys = ['output']
-        for k in interp_keys:
-            # sample
-            timeline = np.arange(batch[k].shape[-1])
-            sample_timeline = timeline[0::interp_ratio]
-            if sample_timeline[-1] != timeline[-1]:
-                sample_timeline = np.append(sample_timeline, timeline[-1])
-            sample = batch[k][..., sample_timeline].cpu().numpy()
-
-            # print(timeline)
-            # print(sample_timeline)
-            # print(sample.shape)
-            # print(len(sample.shape)-1)
-
-            # interpoloate
-            interp_fn = interp1d(sample_timeline, sample, axis=len(sample.shape)-1, kind=interp_type)
-            interped = interp_fn(timeline)
-
-            # scale_factor = tuple([1.] * (len(batch[k].shape) - 1 - 2) + [float(interp_ratio)])
-            # interped = torch.nn.functional.interpolate(sample, scale_factor=scale_factor, mode=interp_type,
-            #                                            align_corners=None, recompute_scale_factor=None)
-            print(interped.shape)
-
-            assert interped.shape == batch[k].shape
-            batch[k] = torch.tensor(interped, device=self.device, dtype=torch.float32)
-        return batch
+    # def interp_batch(self, batch, interp_type, interp_ratio):
+    #     import numpy as np
+    #     from scipy.interpolate import interp1d
+    #     # print(batch.keys())
+    #     # for k in batch.keys():
+    #     #     print('{}: {}'.format(k, batch[k].shape))
+    #     # print(interp_ratio)
+    #     # print(interp_ratio is not None)
+    #     assert type(interp_ratio) == int
+    #     interp_keys = ['output']
+    #     for k in interp_keys:
+    #         # sample
+    #         timeline = np.arange(batch[k].shape[-1])
+    #         sample_timeline = timeline[0::interp_ratio]
+    #         if sample_timeline[-1] != timeline[-1]:
+    #             sample_timeline = np.append(sample_timeline, timeline[-1])
+    #         sample = batch[k][..., sample_timeline].cpu().numpy()
+    #
+    #         # print(timeline)
+    #         # print(sample_timeline)
+    #         # print(sample.shape)
+    #         # print(len(sample.shape)-1)
+    #
+    #         # interpoloate
+    #         interp_fn = interp1d(sample_timeline, sample, axis=len(sample.shape)-1, kind=interp_type)
+    #         interped = interp_fn(timeline)
+    #
+    #         # scale_factor = tuple([1.] * (len(batch[k].shape) - 1 - 2) + [float(interp_ratio)])
+    #         # interped = torch.nn.functional.interpolate(sample, scale_factor=scale_factor, mode=interp_type,
+    #         #                                            align_corners=None, recompute_scale_factor=None)
+    #         print(interped.shape)
+    #
+    #         assert interped.shape == batch[k].shape
+    #         batch[k] = torch.tensor(interped, device=self.device, dtype=torch.float32)
+    #     return batch
 
     def rot2xyz(self, x, mask, **kwargs):
         kargs = self.param2xyz.copy()
         kargs.update(kwargs)
         return self.rotation2xyz(x, mask, **kargs)
     
-    def forward(self, batch, interp_ratio=None, interp_type='nearest'):
+    def forward(self, batch):
         if self.outputxyz:
             batch["x_xyz"] = self.rot2xyz(batch["x"], batch["mask"])
         elif self.pose_rep == "xyz":
@@ -85,8 +85,8 @@ class CAE(nn.Module):
         batch.update(self.encoder(batch))
         # decode
         batch.update(self.decoder(batch))
-        if interp_ratio is not None:
-            batch = self.interp_batch(batch, interp_type, interp_ratio)
+        # if interp_ratio is not None:
+        #     batch = self.interp_batch(batch, interp_type, interp_ratio)
         # if we want to output xyz
         if self.outputxyz:
             batch["output_xyz"] = self.rot2xyz(batch["output"], batch["mask"])
@@ -129,21 +129,21 @@ class CAE(nn.Module):
         output_xyz = self.rot2xyz(batch["output"], batch["mask"])
 
         return output_xyz[0]
-            
+
     def generate(self, classes, durations, nspa=1,
                  noise_same_action="random", noise_diff_action="random",
-                 fact=1, interp_ratio=None, interp_type='nearest'):
+                 fact=1):
         if nspa is None:
             nspa = 1
         nats = len(classes)
-            
+
         y = classes.to(self.device).repeat(nspa)  # (view(nspa, nats))
 
         if len(durations.shape) == 1:
             lengths = durations.to(self.device).repeat(nspa)
         else:
             lengths = durations.to(self.device).reshape(y.shape)
-        
+
         mask = self.lengths_to_mask(lengths)
         
         if noise_same_action == "random":
@@ -177,8 +177,8 @@ class CAE(nn.Module):
         batch = {"z": fact*z, "y": y, "mask": mask, "lengths": lengths}
         batch = self.decoder(batch)
 
-        if interp_ratio is not None:
-            batch = self.interp_batch(batch, interp_type, interp_ratio)
+        # if interp_ratio is not None:
+        #     batch = self.interp_batch(batch, interp_type, interp_ratio)
 
         if self.outputxyz:
             batch["output_xyz"] = self.rot2xyz(batch["output"], batch["mask"])

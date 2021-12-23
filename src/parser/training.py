@@ -1,6 +1,6 @@
 import os
 
-from .base import add_misc_options, add_cuda_options, adding_cuda, ArgumentParser
+from .base import add_misc_options, add_cuda_options, adding_cuda, ArgumentParser, add_experiment_options
 from .tools import save_args
 from .dataset import add_dataset_options
 from .model import add_model_options, parse_modelname
@@ -29,6 +29,8 @@ def parser():
 
     # dataset options
     add_dataset_options(parser)
+
+    add_experiment_options(parser)
 
     # model options
     add_model_options(parser)

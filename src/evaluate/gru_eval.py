@@ -17,7 +17,7 @@ from src.datasets.get_dataset import get_datasets
 
 
 class NewDataloader:
-    def __init__(self, mode, model, dataiterator, device, interp_ratio=None, interp_type=None):
+    def __init__(self, mode, model, dataiterator, device):
         assert mode in ["gen", "rc", "gt"]
         self.batches = []
         with torch.no_grad():
@@ -25,10 +25,7 @@ class NewDataloader:
                 if mode == "gen":
                     classes = databatch["y"]
                     gendurations = databatch["lengths"]
-                    if interp_ratio > 0:
-                        batch = model.generate(classes, gendurations, interp_ratio=interp_ratio, interp_type=interp_type)
-                    else:
-                        batch = model.generate(classes, gendurations)
+                    batch = model.generate(classes, gendurations)
                     batch = {key: val.to(device) for key, val in batch.items()}
                 elif mode == "gt":
                     batch = {key: val.to(device) for key, val in databatch.items()}
@@ -38,10 +35,7 @@ class NewDataloader:
                     batch["output_xyz"] = batch["x_xyz"]
                 elif mode == "rc":
                     databatch = {key: val.to(device) for key, val in databatch.items()}
-                    if interp_ratio > 0:
-                        batch = model(databatch, interp_ratio=interp_ratio, interp_type=interp_type)
-                    else:
-                        batch = model(databatch)
+                    batch = model(databatch)
                     batch["output_xyz"] = model.rot2xyz(batch["output"],
                                                         batch["mask"])
                     batch["x_xyz"] = model.rot2xyz(batch["x"],
@@ -108,8 +102,8 @@ def evaluate(parameters, folder, checkpointname, epoch, niter):
             dataiterator2 = DataLoader(datasetGT2, batch_size=parameters["batch_size"],
                                        shuffle=False, num_workers=8, collate_fn=collate)
 
-            reconstructedloader = NewDataloader("rc", model, dataiterator, device, parameters['interp_ratio'], parameters['interp_type'])
-            motionloader = NewDataloader("gen", model, dataiterator, device, parameters['interp_ratio'], parameters['interp_type'])
+            reconstructedloader = NewDataloader("rc", model, dataiterator, device)
+            motionloader = NewDataloader("gen", model, dataiterator, device)
             gt_motionloader = NewDataloader("gt", model, dataiterator, device)
             gt_motionloader2 = NewDataloader("gt", model, dataiterator2, device)
 
@@ -136,7 +130,7 @@ def evaluate(parameters, folder, checkpointname, epoch, niter):
 
     epoch = checkpointname.split("_")[1].split(".")[0]
     if parameters['interp_ratio'] > 0:
-        metricname = "evaluation_metrics_{}_all_interp_{}_ratio_{}.yaml".format(epoch, parameters['interp_type'], parameters['interp_ratio'])
+        metricname = "evaluation_metrics_{}_all_interp_{}_ratio_{}.yaml".format(epoch)
     else:
         metricname = "evaluation_metrics_{}_all.yaml".format(epoch)
 

@@ -17,7 +17,7 @@ class CVAE(CAE):
         z = eps.mul(std).add_(mu)
         return z
 
-    def forward(self, batch, interp_ratio=None, interp_type='nearest'):
+    def forward(self, batch):
         
         if self.outputxyz:
             batch["x_xyz"] = self.rot2xyz(batch["x"], batch["mask"])
@@ -29,9 +29,6 @@ class CVAE(CAE):
         
         # decode
         batch.update(self.decoder(batch))
-
-        if interp_ratio is not None:
-            batch = self.interp_batch(batch, interp_type, interp_ratio)
         
         # if we want to output xyz
         if self.outputxyz:
